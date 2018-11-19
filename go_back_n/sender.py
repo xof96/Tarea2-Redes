@@ -20,6 +20,16 @@ if __name__ == '__main__':
     # Establecemos parámetros
     buf = 1024
     address = (Server_IP, Server_Port)
+
+    # Establecer conexion
+    SYS = "SYS"
+    OK = "OK"
+
+    the_socket.sendto(SYS.encode(), address)
+    acksys, addressrec = the_socket.recvfrom(buf)
+    if(acksys.decode()=="ACKCON" and addressrec==address):
+        the_socket.sendto(OK.encode(), address)
+
     seq = 0
     ack = 0
     # Obtenemos los parámetros del archivo a enviar

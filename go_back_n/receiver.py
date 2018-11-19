@@ -21,6 +21,15 @@ current_size = 0
 percent = round(0, 2)
 can_receive = True
 
+# Establecer conexion
+SYS, addressSender = the_socket.recvfrom(buf)
+if (SYS.decode() == "SYS"):
+    ACKCON = "ACKCON"
+    the_socket.sendto(ACKCON.encode(), addressSender)
+    OK, addressSenderOk = the_socket.recvfrom(buf)
+    if (OK.decode() != "OK" or addressSenderOk != addressSender):
+        raise Exception('Error qlo')
+
 # Partimos con la secuencia inicial: aquí abrimos el archivo a descargar
 while True:
     # Recibimos un string con los datos y la dirección del socket que mandó los datos
