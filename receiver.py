@@ -46,7 +46,6 @@ while True:
             # Mostramos el avance
             print(str(current_size) + " / " + str(total_size) + " (current size / total size), " + str(percent) + "%")
             # Actualizamos el ack
-            ack = (ack + 1) % 2
             # Enviamos el ack
             the_socket.sendto(str(ack).encode(), address)
             break
