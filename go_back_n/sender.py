@@ -2,6 +2,15 @@
 import socket
 import sys
 import os
+import time
+
+inivent = 0
+buf = 1024
+
+def recACK(rec_addres, sock):
+    global inivent, buf
+    data,address=sock.recvfrom(buf)
+    inivent=data.decode()+1
 
 if __name__ == '__main__':
 
@@ -18,8 +27,11 @@ if __name__ == '__main__':
     Server_Port = int(sys.argv[2])
 
     # Establecemos parámetros
-    buf = 1024
+    #buf = 1024
     address = (Server_IP, Server_Port)
+    # seq = 0
+    # ack = 0
+    window_size = 5
 
     # Establecer conexion
     SYS = "SYS"
@@ -27,11 +39,11 @@ if __name__ == '__main__':
 
     the_socket.sendto(SYS.encode(), address)
     acksys, addressrec = the_socket.recvfrom(buf)
-    if(acksys.decode()=="ACKCON" and addressrec==address):
+    if (acksys.decode() == "ACKCON" and addressrec == address):
         the_socket.sendto(OK.encode(), address)
+    else:
+        raise Exception('Error qlo')
 
-    seq = 0
-    ack = 0
     # Obtenemos los parámetros del archivo a enviar
     file_name = sys.argv[3]
     total_size = os.path.getsize(file_name)
@@ -40,6 +52,38 @@ if __name__ == '__main__':
 
     # Abrimos el archivo
     sending_file = open(file_name, "rb")
+    data = str(file_name) + "|||" + str(total_size) + "|||" + str(inivent)
+    the_socket.sendto(data.encode(), address)
+    #hay que ponerle para que reciba el ack si es que esto se mantiene
+
+
+    blocks = []
+    nseq = 0
+    file = sending_file
+    while True:
+        block = file.read(buf)
+        if not block:
+            break
+        blocks.append(block.decode() + "|||" + str(nseq))
+        nseq += 1
+
+    # inivent=0
+    enviar = 0
+    timeout = 5
+    while (inivent < nseq):
+        while (enviar < inivent + window_size):
+            the_socket.sendto(blocks[enviar].encode(), address)
+            enviar += 1
+        beginning = time.time()
+        tempini = inivent
+        dif = 0
+        while (dif < timeout or tempini != inivent):
+            dif = time.time() - beginning
+        if dif >= timeout:
+            enviar = inivent
+
+    '''sending_file = open(file_name, "rb")
+
 
     # 'Codificamos' el header
     data = str(file_name) + "|||" + str(total_size) + "|||" + str(seq)
@@ -106,7 +150,7 @@ if __name__ == '__main__':
 
         # Actualizamos los datos a enviar
         data = data.decode()
-        data += str(seq)
+        data += str(seq)'''
 
     # Cerramos conexión y archivo
     the_socket.close()
