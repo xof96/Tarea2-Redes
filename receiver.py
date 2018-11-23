@@ -22,13 +22,14 @@ percent = round(0, 2)
 can_receive = True
 
 # Establecer conexion
-SYS, addressSender = the_socket.recvfrom(buf)
-if (SYS.decode() == "SYS"):
-    ACKCON = "ACKCON"
-    the_socket.sendto(ACKCON.encode(), addressSender)
-    OK, addressSenderOk = the_socket.recvfrom(buf)
-    if (OK.decode() != "OK" or addressSenderOk != addressSender):
-        raise Exception('Error qlo')
+SYS, address_sender = the_socket.recvfrom(buf)
+if SYS.decode() == "SYS":
+    ACK_CONN = "ACK_CONN"
+    the_socket.sendto(ACK_CONN.encode(), address_sender)
+    OK, address_sender_ok = the_socket.recvfrom(buf)
+    print(OK.decode(), "OK", address_sender_ok, address_sender)
+    if OK.decode() != "OK" or address_sender_ok != address_sender:
+        raise Exception("Error: No se pudo establecer la conexión.")
 
 # Partimos con la secuencia inicial: aquí abrimos el archivo a descargar
 while True:
