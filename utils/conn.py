@@ -23,7 +23,7 @@ def receiver_handshake_conn(socket, buf, n):
     if conn_req.decode() == SYS:
         socket.sendto(SYS_ACK.encode(), sender_address)
         if n == 3:
-            ok, s_ok_address = socket.recvfrom()
+            ok, s_ok_address = socket.recvfrom(buf)
             if ok.decode() == OK and s_ok_address == sender_address:
                 return True
             else:

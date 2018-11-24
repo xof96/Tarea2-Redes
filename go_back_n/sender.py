@@ -23,5 +23,3 @@ if __name__ == '__main__':
 
     if not sender_handshake_conn(the_socket, address, BUF, 3):
         raise Exception('Error qlo')
-
-
