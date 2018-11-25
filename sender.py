@@ -46,7 +46,6 @@ if __name__ == '__main__':
 
     seq = 0
     ack = 0
-    windows_size = 5
 
     # Obtenemos los parámetros del archivo a enviar
     file_name = sys.argv[3]
@@ -62,7 +61,6 @@ if __name__ == '__main__':
 
     # while para enviar datos
     while True:
-
         # threading.Thread(target=send_data, args=(data, address), name='Sender %d' % seq)
         # Mandamos los datos donde corresponde
         # the_socket.sendto(data, address)

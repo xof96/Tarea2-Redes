@@ -1,8 +1,11 @@
+import os
 import sys
-import socket, threading
+import socket
+
 from utils.conn import sender_handshake_conn
 
 BUF = 1024
+MAX_RTM = 5
 
 if __name__ == '__main__':
 
@@ -23,3 +26,18 @@ if __name__ == '__main__':
 
     if not sender_handshake_conn(the_socket, address, BUF, 3):
         raise Exception('Error qlo')
+
+    # Parámetros
+    seq = 0
+
+    # Obtenemos los parámetros del archivo a enviar
+    file_name = sys.argv[3]
+    total_size = os.path.getsize(file_name)
+    current_size = 0
+    percent = round(0, 2)
+
+    # Abrimos el archivo
+    sending_file = open(file_name, "rb")
+
+    # 'Codificamos' el header
+    data = str(file_name) + "|||" + str(total_size) + "|||" + str(seq)
