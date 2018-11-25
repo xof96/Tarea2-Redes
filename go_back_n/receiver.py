@@ -50,7 +50,7 @@ while True:
             break
 
 # Seteamos un timeout (bloqueamos el socket después de 0.5s)
-the_socket.settimeout(0.5)
+#the_socket.settimeout(0.5)
 
 # Contador de intentos
 try_counter = 0
