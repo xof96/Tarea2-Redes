@@ -24,3 +24,11 @@ if __name__ == '__main__':
 
     if not receiver_handshake_conn(the_socket, BUF, 3):
         raise Exception('Error qlo')
+
+    ack = 0
+    current_size = 0
+    percent = round(0, 2)
+    can_receive = True
+
+    while True:
+
