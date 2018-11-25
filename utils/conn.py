@@ -27,8 +27,8 @@ def receiver_handshake_conn(socket, buf, n):
     if conn_req.decode() == SYS:
         socket.sendto(SYS_ACK.encode(), sender_address)
         if n == 3:
-            ok, s_ok_address = socket.recvfrom(buf)
-            if ok.decode() == ACK and s_ok_address == sender_address:
+            ack, s_ok_address = socket.recvfrom(buf)
+            if ack.decode() == ACK and s_ok_address == sender_address:
                 return True
             else:
                 return False
@@ -49,11 +49,29 @@ def sender_leaves_conn(socket, address, buf, n):
         if fin_res.decode() == FIN and fin_res_address == address:
             if n == 3:
                 socket.sendto(ACK.encode(), address)
-                time.sleep()
+                time.sleep(2)
                 return True
             elif n == 2:
                 return True
             else:
                 return False
+        else:
+            return False
+    else:
+        return False
+
+
+def receiver_leaves_conn(socket, sender_address, buf, n):
+    socket.sendto(ACK.encode(), sender_address)
+    time.sleep(2)
+    socket.sendto(FIN.encode(), sender_address)
+    if n == 3:
+        ack, s_ok_address = socket.recvfrom(buf)
+        if ack.decode() == ACK and s_ok_address == sender_address:
+            return True
+        else:
+            return False
+    elif n == 2:
+        return True
     else:
         return False
