@@ -7,17 +7,30 @@ import time
 from utils.conn import sender_handshake_conn
 
 BUF = 1024
-TIMEOUT = 0.5
+TIMEOUT = 1
 INTERVAL_TIME = 0.01
 MAX_RTM = 5
 WINDOWS_SIZE = 5
 WINDOWS_BEGINNING = 0
 MAX_SEQ_NUM = WINDOWS_SIZE + 1
 
+mutex = threading.Lock()
+
 
 def receive_ack(a_socket):
-    data, receiver = a_socket.recvfrom(BUF)
-    ack = data.decode().split('|||')[0]
+    global WINDOWS_BEGINNING
+    print("hola")
+    while True:
+        data, receiver = a_socket.recvfrom(BUF)
+        ack = data.decode().split('|||')[0]
+        print(ack)
+        if ack == '':
+            break
+
+        mutex.acquire()
+        WINDOWS_BEGINNING = int(ack)
+        mutex.release()
+
     return 0
 
 
@@ -59,7 +72,12 @@ if __name__ == '__main__':
 
     # Armar paquetes
     packets = []
-    seq_num = 0
+    seq_num = 1
+
+    ack_from_header = the_socket.recvfrom(BUF)[0]
+    print(ack_from_header)
+    if ack_from_header.decode() != '0':
+        raise Exception("Error Reqlo")
 
     while True:
         data = sending_file.read(BUF - 1)
@@ -70,6 +88,8 @@ if __name__ == '__main__':
         seq_num = (seq_num + 1) % MAX_SEQ_NUM
 
     while True:
+        start_time = 0  # Placeholder
+        mutex.acquire()
 
         while seq < WINDOWS_BEGINNING + WINDOWS_SIZE:
             the_socket.sendto(packets[seq], address)
@@ -78,7 +98,9 @@ if __name__ == '__main__':
 
             if seq == WINDOWS_BEGINNING:
                 # Seteamos un timeout (bloqueamos el socket después de 0.5s)
-                the_socket.settimeout(TIMEOUT)
+                # the_socket.settimeout(TIMEOUT)
+                start_time = time.time()
+                print(start_time)
 
             # Actualizamos el número de secuencia
             seq += 1
@@ -86,6 +108,17 @@ if __name__ == '__main__':
             current_size += len(packets[seq])
             percent = round(float(current_size) / float(total_size) * 100, 2)
 
-        break
+        mutex.release()
 
-        # threading.Thread(receive_ack, args=the_socket)
+        print("Voy a lanzar el thread")
+        t = threading.Thread(target=receive_ack, args=[the_socket])
+        t.start()
+
+        d_time = time.time() - start_time
+
+        while d_time < TIMEOUT or WINDOWS_BEGINNING == seq:
+            # print(time.time() - start_time)
+            continue
+        time.sleep(4)
+        print(t.is_alive())
+        break
