@@ -1,11 +1,21 @@
 import os
 import sys
 import socket
+import threading
+import time
 
 from utils.conn import sender_handshake_conn
 
 BUF = 1024
+TIMEOUT = 0.5
 MAX_RTM = 5
+WINDOWS_SIZE = 5
+SEQ_LIMIT = WINDOWS_SIZE + 1
+
+
+def receive_ack(a_socket):
+    return a_socket
+
 
 if __name__ == '__main__':
 
@@ -41,3 +51,35 @@ if __name__ == '__main__':
 
     # 'Codificamos' el header
     data = str(file_name) + "|||" + str(total_size) + "|||" + str(seq)
+
+    while True:
+        n_packet = 0
+
+        while n_packet < WINDOWS_SIZE:
+            the_socket.sendto(data.encode(), address)
+            time.sleep(0.01)
+
+            if seq == 0:
+                # Seteamos un timeout (bloqueamos el socket después de 0.5s)
+                the_socket.settimeout(TIMEOUT)
+
+            # Actualizamos el número de secuencia
+            seq = (seq + 1)
+
+            # (**) Actualizamos los parámetros :
+            data = sending_file.read(BUF - 1)
+            current_size += len(data)
+            percent = round(float(current_size) / float(total_size) * 100, 2)
+
+            # Si no hay datos mandamos un string vacío y dejamos de enviar cosas
+            if not data:
+                the_socket.sendto("".encode(), address)
+                break
+
+            # Actualizamos los datos a enviar
+            data = data.decode()
+            data += str(seq)
+            n_packet += 1
+
+        threading.Thread(receive_ack, args=the_socket)
+
