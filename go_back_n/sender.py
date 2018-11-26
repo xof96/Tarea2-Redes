@@ -31,11 +31,7 @@ def receive_ack(a_socket):
         ind = packets_indexes[WINDOWS_BEGINNING:].index(int(ack)) + WINDOWS_BEGINNING
 
         if ind + 1 + WINDOWS_SIZE <= LEN_PACKETS:
-            WINDOWS_BEGINNING = ind
-
-        print("Recibí el ACK", ack)
-        print("WindowsBeginningThread", WINDOWS_BEGINNING)
-
+            WINDOWS_BEGINNING = ind + 1
     return 0
 
 
@@ -81,7 +77,6 @@ if __name__ == '__main__':
     d_time = 0  # Measures the time
 
     ack_from_header = the_socket.recvfrom(BUF)[0]
-    print(ack_from_header)
     if ack_from_header.decode() != '0':
         raise Exception("Error Reqlo")
 
@@ -103,17 +98,14 @@ if __name__ == '__main__':
     while WINDOWS_BEGINNING + WINDOWS_SIZE <= LEN_PACKETS:
         start_time = 0  # Placeholder
         windows_tale = WINDOWS_BEGINNING
-        print("WindowsTale", windows_tale)
 
         if d_time >= TIMEOUT:
-            print("Casi CTM!")
             seq = WINDOWS_BEGINNING
-
-        print("seq", seq)
 
         while seq < WINDOWS_BEGINNING + WINDOWS_SIZE:
             the_socket.sendto(packets[seq], address)
-            print("Envié el paquete %s" % (packets[seq].decode()[len(packets[seq].decode()) - 1]))
+            # print(WINDOWS_BEGINNING)
+            # print("Envié el paquete %s" % seq)
             time.sleep(INTERVAL_TIME)
 
             if WINDOWS_BEGINNING == windows_tale:
@@ -122,22 +114,19 @@ if __name__ == '__main__':
                 start_time = time.time()
                 # print(start_time)
 
+            current_size += len(packets[seq])
+            percent = round(float(current_size) / float(total_size) * 100, 2)
+            print(str(current_size) + " / " + str(total_size) + "(current size / total size), " + str(
+                    percent) + "%")
+
             # Actualizamos el número de secuencia
             seq += 1
 
-            current_size += len(packets[seq])
-            percent = round(float(current_size) / float(total_size) * 100, 2)
-
         d_time = time.time() - start_time
-        print(d_time)
+        # print(d_time)
 
         while d_time < TIMEOUT and WINDOWS_BEGINNING == windows_tale:
             # print(time.time() - start_time)
             # print("WindowsBeginning", WINDOWS_BEGINNING)
             # print("WindowsTale", windows_tale)
             continue
-
-        # print("WindowsBeginning", WINDOWS_BEGINNING)
-        # print("WindowsTale", windows_tale)
-        # print("Salí del while de tiempo")
-        # break

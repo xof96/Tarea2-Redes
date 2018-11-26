@@ -58,7 +58,6 @@ if __name__ == '__main__':
         data = data[0:last_byte]
         if int(n_seq) == curr_seq:
             the_socket.sendto(n_seq.encode(), sender)
-            print(data)
             # Escribimos los datos en el archivo que abrimos antes
             downloading_file.write(data.encode())
 
