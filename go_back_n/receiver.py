@@ -1,7 +1,7 @@
 import socket
 import sys
 
-from utils.conn import receiver_handshake_conn
+from utils.conn import receiver_handshake_conn, receiver_leaves_conn
 
 BUF = 1024
 MAX_SEQ_NUM = 0
@@ -53,6 +53,8 @@ if __name__ == '__main__':
     while True:
         data, sender = the_socket.recvfrom(BUF)
         data = data.decode()
+        if data == 'FIN':
+            break
         last_byte = len(data) - 1
         n_seq = data[last_byte]
         data = data[0:last_byte]
@@ -72,3 +74,9 @@ if __name__ == '__main__':
 
         else:
             the_socket.sendto(str(curr_seq).encode(), sender)
+
+    if not receiver_leaves_conn(the_socket, sender, BUF, 3):
+        print("No se pudo cerrar la conexión")
+
+    downloading_file.close()
+    the_socket.close()

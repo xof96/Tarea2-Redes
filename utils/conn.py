@@ -42,6 +42,7 @@ def receiver_handshake_conn(socket, buf, n):
 
 
 def sender_leaves_conn(socket, address, buf, n):
+    print("holahola1")
     socket.sendto(FIN.encode(), address)
     ack_res, rec_address = socket.recvfrom(buf)
     if ack_res.decode() == SYS and rec_address == address:

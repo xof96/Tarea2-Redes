@@ -4,7 +4,7 @@ import socket
 import threading
 import time
 
-from utils.conn import sender_handshake_conn
+from utils.conn import sender_handshake_conn, sender_leaves_conn
 
 BUF = 1024
 TIMEOUT = 10
@@ -14,24 +14,28 @@ WINDOWS_SIZE = 5
 WINDOWS_BEGINNING = 0
 MAX_SEQ_NUM = WINDOWS_SIZE + 1
 LEN_PACKETS = 0
+FINISHED = False
 
 # mutex = threading.Lock()
 packets_indexes = []
 
 
 def receive_ack(a_socket):
-    global WINDOWS_BEGINNING
+    global WINDOWS_BEGINNING, FINISHED
 
     while True:
         ack_data, receiver = a_socket.recvfrom(BUF)
         ack = ack_data.decode().split('|||')[0]
         if ack == '':
             break
-
-        ind = packets_indexes[WINDOWS_BEGINNING:].index(int(ack)) + WINDOWS_BEGINNING
-
-        if ind + 1 + WINDOWS_SIZE <= LEN_PACKETS:
-            WINDOWS_BEGINNING = ind + 1
+        try:
+            ind = packets_indexes[WINDOWS_BEGINNING:].index(int(ack)) + WINDOWS_BEGINNING
+            if ind + 1 + WINDOWS_SIZE <= LEN_PACKETS:
+                WINDOWS_BEGINNING = ind + 1
+        except Exception:
+            print("RETORNÉ")
+            FINISHED = True
+            return 0
     return 0
 
 
@@ -91,11 +95,11 @@ if __name__ == '__main__':
 
     LEN_PACKETS = len(packets)
 
-    # print("Voy a lanzar el thread")
     t = threading.Thread(target=receive_ack, args=[the_socket])
     t.start()
 
-    while WINDOWS_BEGINNING + WINDOWS_SIZE <= LEN_PACKETS:
+    while not FINISHED:
+        print(FINISHED)
         start_time = 0  # Placeholder
         windows_tale = WINDOWS_BEGINNING
 
@@ -104,29 +108,29 @@ if __name__ == '__main__':
 
         while seq < WINDOWS_BEGINNING + WINDOWS_SIZE:
             the_socket.sendto(packets[seq], address)
-            # print(WINDOWS_BEGINNING)
-            # print("Envié el paquete %s" % seq)
             time.sleep(INTERVAL_TIME)
 
             if WINDOWS_BEGINNING == windows_tale:
                 # Seteamos un timeout (bloqueamos el socket después de 0.5s)
                 # the_socket.settimeout(TIMEOUT)
                 start_time = time.time()
-                # print(start_time)
 
-            current_size += len(packets[seq])
+            current_size += len(packets[seq]) - 1
             percent = round(float(current_size) / float(total_size) * 100, 2)
-            print(str(current_size) + " / " + str(total_size) + "(current size / total size), " + str(
-                    percent) + "%")
+            # print(str(current_size) + " / " + str(total_size) + "(current size / total size), " + str(percent) + "%")
 
             # Actualizamos el número de secuencia
             seq += 1
 
         d_time = time.time() - start_time
-        # print(d_time)
 
         while d_time < TIMEOUT and WINDOWS_BEGINNING == windows_tale:
-            # print(time.time() - start_time)
-            # print("WindowsBeginning", WINDOWS_BEGINNING)
-            # print("WindowsTale", windows_tale)
             continue
+
+    print("voy a hacer el join")
+    t.join()
+    print("hice el join")
+    if sender_leaves_conn(the_socket, address, BUF, 3):
+        print("No se pudo cerrar la conexión")
+    sending_file.close()
+    the_socket.close()
