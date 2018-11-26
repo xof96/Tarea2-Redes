@@ -7,29 +7,34 @@ import time
 from utils.conn import sender_handshake_conn
 
 BUF = 1024
-TIMEOUT = 1
+TIMEOUT = 10
 INTERVAL_TIME = 0.01
 MAX_RTM = 5
 WINDOWS_SIZE = 5
 WINDOWS_BEGINNING = 0
 MAX_SEQ_NUM = WINDOWS_SIZE + 1
+LEN_PACKETS = 0
 
-mutex = threading.Lock()
+# mutex = threading.Lock()
+packets_indexes = []
 
 
 def receive_ack(a_socket):
     global WINDOWS_BEGINNING
-    print("hola")
+
     while True:
-        data, receiver = a_socket.recvfrom(BUF)
-        ack = data.decode().split('|||')[0]
-        print(ack)
+        ack_data, receiver = a_socket.recvfrom(BUF)
+        ack = ack_data.decode().split('|||')[0]
         if ack == '':
             break
 
-        mutex.acquire()
-        WINDOWS_BEGINNING = int(ack)
-        mutex.release()
+        ind = packets_indexes[WINDOWS_BEGINNING:].index(int(ack)) + WINDOWS_BEGINNING
+
+        if ind + 1 + WINDOWS_SIZE <= LEN_PACKETS:
+            WINDOWS_BEGINNING = ind
+
+        print("Recibí el ACK", ack)
+        print("WindowsBeginningThread", WINDOWS_BEGINNING)
 
     return 0
 
@@ -73,6 +78,7 @@ if __name__ == '__main__':
     # Armar paquetes
     packets = []
     seq_num = 1
+    d_time = 0  # Measures the time
 
     ack_from_header = the_socket.recvfrom(BUF)[0]
     print(ack_from_header)
@@ -85,22 +91,36 @@ if __name__ == '__main__':
             break
         data_buf = str(data.decode()) + str(seq_num)
         packets.append(data_buf.encode())
+        packets_indexes.append(seq_num)
         seq_num = (seq_num + 1) % MAX_SEQ_NUM
 
-    while True:
+    LEN_PACKETS = len(packets)
+
+    # print("Voy a lanzar el thread")
+    t = threading.Thread(target=receive_ack, args=[the_socket])
+    t.start()
+
+    while WINDOWS_BEGINNING + WINDOWS_SIZE <= LEN_PACKETS:
         start_time = 0  # Placeholder
-        mutex.acquire()
+        windows_tale = WINDOWS_BEGINNING
+        print("WindowsTale", windows_tale)
+
+        if d_time >= TIMEOUT:
+            print("Casi CTM!")
+            seq = WINDOWS_BEGINNING
+
+        print("seq", seq)
 
         while seq < WINDOWS_BEGINNING + WINDOWS_SIZE:
             the_socket.sendto(packets[seq], address)
-            print("Envié el paquete %d de largo %d" % (seq, len(packets[seq])))
+            print("Envié el paquete %s" % (packets[seq].decode()[len(packets[seq].decode()) - 1]))
             time.sleep(INTERVAL_TIME)
 
-            if seq == WINDOWS_BEGINNING:
+            if WINDOWS_BEGINNING == windows_tale:
                 # Seteamos un timeout (bloqueamos el socket después de 0.5s)
                 # the_socket.settimeout(TIMEOUT)
                 start_time = time.time()
-                print(start_time)
+                # print(start_time)
 
             # Actualizamos el número de secuencia
             seq += 1
@@ -108,17 +128,16 @@ if __name__ == '__main__':
             current_size += len(packets[seq])
             percent = round(float(current_size) / float(total_size) * 100, 2)
 
-        mutex.release()
-
-        print("Voy a lanzar el thread")
-        t = threading.Thread(target=receive_ack, args=[the_socket])
-        t.start()
-
         d_time = time.time() - start_time
+        print(d_time)
 
-        while d_time < TIMEOUT or WINDOWS_BEGINNING == seq:
+        while d_time < TIMEOUT and WINDOWS_BEGINNING == windows_tale:
             # print(time.time() - start_time)
+            # print("WindowsBeginning", WINDOWS_BEGINNING)
+            # print("WindowsTale", windows_tale)
             continue
-        time.sleep(4)
-        print(t.is_alive())
-        break
+
+        # print("WindowsBeginning", WINDOWS_BEGINNING)
+        # print("WindowsTale", windows_tale)
+        # print("Salí del while de tiempo")
+        # break
