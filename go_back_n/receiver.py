@@ -25,4 +25,4 @@ if __name__ == '__main__':
     if not receiver_handshake_conn(the_socket, BUF, 3):
         raise Exception('Error qlo')
 
-    print("Ganamos!")
+    data, sender = the_socket.recvfrom(BUF)

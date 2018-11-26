@@ -8,9 +8,10 @@ from utils.conn import sender_handshake_conn
 
 BUF = 1024
 TIMEOUT = 0.5
+INTERVAL_TIME = 0.01
 MAX_RTM = 5
 WINDOWS_SIZE = 5
-SEQ_LIMIT = WINDOWS_SIZE + 1
+MAX_SEQ_NUM = WINDOWS_SIZE + 1
 
 
 def receive_ack(a_socket):
@@ -50,25 +51,38 @@ if __name__ == '__main__':
     sending_file = open(file_name, "rb")
 
     # 'Codificamos' el header
-    data = str(file_name) + "|||" + str(total_size) + "|||" + str(seq)
+    data = str(file_name) + "|||" + str(total_size) + "|||" + str(MAX_SEQ_NUM)
+    the_socket.sendto(data.encode(), address)
+
+
+    # Armar paquetes
+    packets = []
+    seq_num = 0
+
+    while True:
+        data = sending_file.read(BUF - 1)
+        if not data:
+            break
+        data_buf = str(data) + str(seq_num)
+        packets.append(data_buf.encode())
+        seq_num = (seq_num + 1) % MAX_SEQ_NUM
 
     while True:
         n_packet = 0
+        windows_beginning = 0
 
-        while n_packet < WINDOWS_SIZE:
-            the_socket.sendto(data.encode(), address)
-            time.sleep(0.01)
+        while n_packet < windows_beginning + WINDOWS_SIZE:
+            the_socket.sendto(packets[seq], address)
+            time.sleep(INTERVAL_TIME)
 
-            if seq == 0:
+            if n_packet == windows_beginning:
                 # Seteamos un timeout (bloqueamos el socket después de 0.5s)
                 the_socket.settimeout(TIMEOUT)
 
             # Actualizamos el número de secuencia
-            seq = (seq + 1)
+            seq += 1
 
-            # (**) Actualizamos los parámetros :
-            data = sending_file.read(BUF - 1)
-            current_size += len(data)
+            current_size += len(packets[seq])
             percent = round(float(current_size) / float(total_size) * 100, 2)
 
             # Si no hay datos mandamos un string vacío y dejamos de enviar cosas
@@ -79,7 +93,5 @@ if __name__ == '__main__':
             # Actualizamos los datos a enviar
             data = data.decode()
             data += str(seq)
-            n_packet += 1
 
         threading.Thread(receive_ack, args=the_socket)
-
