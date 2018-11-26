@@ -11,11 +11,14 @@ TIMEOUT = 0.5
 INTERVAL_TIME = 0.01
 MAX_RTM = 5
 WINDOWS_SIZE = 5
+WINDOWS_BEGINNING = 0
 MAX_SEQ_NUM = WINDOWS_SIZE + 1
 
 
 def receive_ack(a_socket):
-    return a_socket
+    data, receiver = a_socket.recvfrom(BUF)
+    ack = data.decode().split('|||')[0]
+    return 0
 
 
 if __name__ == '__main__':
@@ -54,7 +57,6 @@ if __name__ == '__main__':
     data = str(file_name) + "|||" + str(total_size) + "|||" + str(MAX_SEQ_NUM)
     the_socket.sendto(data.encode(), address)
 
-
     # Armar paquetes
     packets = []
     seq_num = 0
@@ -63,19 +65,18 @@ if __name__ == '__main__':
         data = sending_file.read(BUF - 1)
         if not data:
             break
-        data_buf = str(data) + str(seq_num)
+        data_buf = str(data.decode()) + str(seq_num)
         packets.append(data_buf.encode())
         seq_num = (seq_num + 1) % MAX_SEQ_NUM
 
     while True:
-        n_packet = 0
-        windows_beginning = 0
 
-        while n_packet < windows_beginning + WINDOWS_SIZE:
+        while seq < WINDOWS_BEGINNING + WINDOWS_SIZE:
             the_socket.sendto(packets[seq], address)
+            print("Envié el paquete %d de largo %d" % (seq, len(packets[seq])))
             time.sleep(INTERVAL_TIME)
 
-            if n_packet == windows_beginning:
+            if seq == WINDOWS_BEGINNING:
                 # Seteamos un timeout (bloqueamos el socket después de 0.5s)
                 the_socket.settimeout(TIMEOUT)
 
@@ -85,13 +86,6 @@ if __name__ == '__main__':
             current_size += len(packets[seq])
             percent = round(float(current_size) / float(total_size) * 100, 2)
 
-            # Si no hay datos mandamos un string vacío y dejamos de enviar cosas
-            if not data:
-                the_socket.sendto("".encode(), address)
-                break
+        break
 
-            # Actualizamos los datos a enviar
-            data = data.decode()
-            data += str(seq)
-
-        threading.Thread(receive_ack, args=the_socket)
+        # threading.Thread(receive_ack, args=the_socket)

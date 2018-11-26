@@ -4,6 +4,11 @@ import sys
 from utils.conn import receiver_handshake_conn
 
 BUF = 1024
+MAX_SEQ_NUM = 0
+
+ack = 0
+current_size = 0
+percent = round(0, 2)
 
 if __name__ == '__main__':
 
@@ -26,3 +31,23 @@ if __name__ == '__main__':
         raise Exception('Error qlo')
 
     data, sender = the_socket.recvfrom(BUF)
+
+    if data:
+        # Separamos los datos recibidos
+        (file_name, total_size, max_num_seq) = data.decode().split("|||")
+        MAX_SEQ_NUM = max_num_seq
+
+        # Si recibimos los datos que esperabamos guardamos el archivo
+
+        downloading_file = open("received_" + file_name, "wb")
+        # Mostramos el avance
+        print(str(current_size) + " / " + str(total_size) + " (current size / total size), " + str(percent) + "%")
+
+        # Enviamos el ack
+        the_socket.sendto(str(ack).encode(), sender)
+
+    curr_seq = 0
+
+    while True:
+        data, sender = the_socket.recvfrom(BUF)
+        print(data.decode())
