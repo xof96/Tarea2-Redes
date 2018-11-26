@@ -31,4 +31,13 @@ if __name__ == '__main__':
     can_receive = True
 
     while True:
+        if can_receive:
+            data, address = the_socket.recvfrom(BUF)
+            data = data.decode()
+            # Si no me llegó nada, paramos
+            if not data:
+                break
+            text, seq=data.split("|||")
+            seq=int(seq)
+
 
