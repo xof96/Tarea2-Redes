@@ -2,6 +2,7 @@ import socket
 import sys
 
 from utils.conn import receiver_handshake_conn, receiver_leaves_conn
+from utils.timeout import timeout_rec
 
 BUF = 1024
 MAX_SEQ_NUM = 0
@@ -30,7 +31,9 @@ if __name__ == '__main__':
     # Establecemos los parámetros.
 
     if not receiver_handshake_conn(the_socket, BUF, 3):
-        raise Exception('Error qlo')
+        raise Exception('Error en handshake')
+
+    timeout_rec(the_socket)
 
     data, sender = the_socket.recvfrom(BUF)
 

@@ -36,16 +36,14 @@ def receiver_handshake_conn(socket, buf, n):
             return True
         else:
             return False
-
     else:
         return False
 
 
 def sender_leaves_conn(socket, address, buf, n):
-    print("holahola1")
     socket.sendto(FIN.encode(), address)
     ack_res, rec_address = socket.recvfrom(buf)
-    if ack_res.decode() == SYS and rec_address == address:
+    if ack_res.decode() == ACK and rec_address == address:
         fin_res, fin_res_address = socket.recvfrom(buf)
         if fin_res.decode() == FIN and fin_res_address == address:
             if n == 3:

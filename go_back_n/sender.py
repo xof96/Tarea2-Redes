@@ -5,37 +5,43 @@ import threading
 import time
 
 from utils.conn import sender_handshake_conn, sender_leaves_conn
+from utils.timeout import timeout_calc
 
 BUF = 1024
-TIMEOUT = 10
+TIMEOUT = 1
 INTERVAL_TIME = 0.01
 MAX_RTM = 5
 WINDOWS_SIZE = 5
 WINDOWS_BEGINNING = 0
+WINDOWS_HAS_MOVED = True
 MAX_SEQ_NUM = WINDOWS_SIZE + 1
 LEN_PACKETS = 0
 FINISHED = False
 
-# mutex = threading.Lock()
+mutex = threading.Lock()
 packets_indexes = []
 
 
 def receive_ack(a_socket):
-    global WINDOWS_BEGINNING, FINISHED
+    global WINDOWS_BEGINNING, FINISHED, WINDOWS_HAS_MOVED
 
     while True:
         ack_data, receiver = a_socket.recvfrom(BUF)
-        ack = ack_data.decode().split('|||')[0]
+        ack = ack_data.decode()
         if ack == '':
             break
-        try:
-            ind = packets_indexes[WINDOWS_BEGINNING:].index(int(ack)) + WINDOWS_BEGINNING
+        ind = packets_indexes[WINDOWS_BEGINNING:].index(int(ack)) + WINDOWS_BEGINNING
+        if ind == LEN_PACKETS - 1:
+            mutex.acquire()
+            FINISHED = True
+            mutex.release()
+            break
+        else:
             if ind + 1 + WINDOWS_SIZE <= LEN_PACKETS:
                 WINDOWS_BEGINNING = ind + 1
-        except Exception:
-            print("RETORNÉ")
-            FINISHED = True
-            return 0
+                mutex.acquire()
+                WINDOWS_HAS_MOVED = True
+                mutex.release()
     return 0
 
 
@@ -57,7 +63,10 @@ if __name__ == '__main__':
     address = (server_ip, server_port)
 
     if not sender_handshake_conn(the_socket, address, BUF, 3):
-        raise Exception('Error qlo')
+        raise Exception('Error en handshake')
+
+    TIMEOUT=timeout_calc(the_socket,address)
+    print(TIMEOUT)
 
     # Parámetros
     seq = 0
@@ -82,7 +91,7 @@ if __name__ == '__main__':
 
     ack_from_header = the_socket.recvfrom(BUF)[0]
     if ack_from_header.decode() != '0':
-        raise Exception("Error Reqlo")
+        raise Exception("Error en envío de header")
 
     while True:
         data = sending_file.read(BUF - 1)
@@ -98,10 +107,10 @@ if __name__ == '__main__':
     t = threading.Thread(target=receive_ack, args=[the_socket])
     t.start()
 
+    mutex.acquire()
     while not FINISHED:
-        print(FINISHED)
+        mutex.release()
         start_time = 0  # Placeholder
-        windows_tale = WINDOWS_BEGINNING
 
         if d_time >= TIMEOUT:
             seq = WINDOWS_BEGINNING
@@ -110,27 +119,28 @@ if __name__ == '__main__':
             the_socket.sendto(packets[seq], address)
             time.sleep(INTERVAL_TIME)
 
-            if WINDOWS_BEGINNING == windows_tale:
-                # Seteamos un timeout (bloqueamos el socket después de 0.5s)
-                # the_socket.settimeout(TIMEOUT)
+            if WINDOWS_HAS_MOVED:
                 start_time = time.time()
+                mutex.acquire()
+                WINDOWS_HAS_MOVED = False
+                mutex.release()
 
             current_size += len(packets[seq]) - 1
             percent = round(float(current_size) / float(total_size) * 100, 2)
-            # print(str(current_size) + " / " + str(total_size) + "(current size / total size), " + str(percent) + "%")
+            print(str(current_size) + " / " + str(total_size) + "(current size / total size), " + str(percent) + "%")
 
             # Actualizamos el número de secuencia
             seq += 1
 
-        d_time = time.time() - start_time
+        mutex.acquire()
+        while d_time < TIMEOUT and not WINDOWS_HAS_MOVED:
+            mutex.release()
+            d_time = time.time() - start_time
+            mutex.acquire()
 
-        while d_time < TIMEOUT and WINDOWS_BEGINNING == windows_tale:
-            continue
-
-    print("voy a hacer el join")
+    mutex.release()
     t.join()
-    print("hice el join")
-    if sender_leaves_conn(the_socket, address, BUF, 3):
+    if not sender_leaves_conn(the_socket, address, BUF, 3):
         print("No se pudo cerrar la conexión")
     sending_file.close()
     the_socket.close()
