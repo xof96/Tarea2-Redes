@@ -30,16 +30,21 @@ def receiver_handshake_conn(socket, buf, n):
     conn_req, sender_address = socket.recvfrom(buf)
     if conn_req.decode() == SYS:
         socket.sendto(SYS_ACK.encode(), sender_address)
-        if n == 3:
-            ack, s_ok_address = socket.recvfrom(buf)
-            if ack.decode() == ACK and s_ok_address == sender_address:
-                return True
-            else:
-                return False
-        elif n == 2:
-            return True
-        else:
-            return False
+        socket.settimeout(1)
+        while True:
+            try:
+                if n == 3:
+                    ack, s_ok_address = socket.recvfrom(buf)
+                    if ack.decode() == ACK and s_ok_address == sender_address:
+                        return True
+                    else:
+                        return False
+                elif n == 2:
+                    return True
+                else:
+                    return False
+            except:
+                socket.sendto(SYS_ACK.encode(), sender_address)
     else:
         return False
 
