@@ -65,8 +65,8 @@ if __name__ == '__main__':
     if not sender_handshake_conn(the_socket, address, BUF, 3):
         raise Exception('Error en handshake')
 
-    TIMEOUT=timeout_calc(the_socket,address)
-    print(TIMEOUT)
+    #TIMEOUT=timeout_calc(the_socket,address)
+    #print(TIMEOUT)
 
     # Parámetros
     seq = 0
@@ -116,6 +116,7 @@ if __name__ == '__main__':
             seq = WINDOWS_BEGINNING
 
         while seq < WINDOWS_BEGINNING + WINDOWS_SIZE:
+            print("envío el paquete de seq: ",seq)
             the_socket.sendto(packets[seq], address)
             time.sleep(INTERVAL_TIME)
 

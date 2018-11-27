@@ -9,18 +9,22 @@ FIN = 'FIN'
 
 def sender_handshake_conn(socket, address, buf, n):
     socket.sendto(SYS.encode(), address)
-    sys_ack_res, rec_address = socket.recvfrom(buf)
-    if sys_ack_res.decode() == SYS_ACK and rec_address == address:
-        if n == 3:
-            socket.sendto(ACK.encode(), address)
-            return True
-        elif n == 2:
-            return True
-        else:
-            return False
-    else:
-        return False
-
+    socket.settimeout(1)
+    while True:
+        try:
+            sys_ack_res, rec_address = socket.recvfrom(buf)
+            if sys_ack_res.decode() == SYS_ACK and rec_address == address:
+                if n == 3:
+                    socket.sendto(ACK.encode(), address)
+                    return True
+                elif n == 2:
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        except:
+            socket.sendto(SYS.encode(), address)
 
 def receiver_handshake_conn(socket, buf, n):
     conn_req, sender_address = socket.recvfrom(buf)

@@ -18,6 +18,7 @@ if __name__ == '__main__':
     # Verificamos que vengan los parámetros.
     if len(sys.argv) != 2:
         print("python receiver.py [PORT_NUMBER]")
+        sys.exit(0)
 
     SW_IP = ""
     SW_PORT = int(sys.argv[1])
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     if not receiver_handshake_conn(the_socket, BUF, 3):
         raise Exception('Error en handshake')
 
-    timeout_rec(the_socket)
+    #timeout_rec(the_socket)
 
     data, sender = the_socket.recvfrom(BUF)
 
@@ -62,6 +63,7 @@ if __name__ == '__main__':
         n_seq = data[last_byte]
         data = data[0:last_byte]
         if int(n_seq) == curr_seq:
+            print("voy a enviar ack con nseq: ",n_seq)
             the_socket.sendto(n_seq.encode(), sender)
             # Escribimos los datos en el archivo que abrimos antes
             downloading_file.write(data.encode())
@@ -76,7 +78,8 @@ if __name__ == '__main__':
             curr_seq = (curr_seq + 1) % MAX_SEQ_NUM
 
         else:
-            the_socket.sendto(str(curr_seq).encode(), sender)
+            print("me llego una wea nada que ver asi que envio el ack del ultimo que me llego bien: ", curr_seq - 1)
+            the_socket.sendto(str((curr_seq - 1) % MAX_SEQ_NUM).encode(), sender)
 
     if not receiver_leaves_conn(the_socket, sender, BUF, 3):
         print("No se pudo cerrar la conexión")
